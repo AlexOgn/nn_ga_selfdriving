@@ -2,7 +2,7 @@ const canvas = document.getElementById('maincanvas');
 const context = canvas.getContext('2d');
 
 const updateInterval = 20;
-const maxTicksPerGeneration = 500;
+const maxTicksPerGeneration = 1500;
 
 let ticksPerUpdate = 5;
 
@@ -28,10 +28,10 @@ class Body {
 
 class Car {
 	constructor(x, y) {
-		this.sensors = 8;
-		this.nn = new Network([this.sensors, 5, 2]);
+		this.sensors = 6;
+		this.nn = new Network([this.sensors, 5, 2], F_TanH);
 		this.body = new Body(x, y, 10);
-		this.sensorRadius = this.body.r * (3 / 5);
+		this.sensorRadius = this.body.r * (4 / 5);
 		this.angle = 0;
 		this.speed = 0;
 		this.score = 0;
@@ -69,7 +69,7 @@ class Car {
 		let da = result[0];
 		if(da < -0.2) da = -0.2;
 		if(da >  0.2) da =  0.2;
-		this.angle += da;
+		this.angle -= da;
 
 		let ds = result[1];
 		if(ds < -0.1) ds = -0.1;
@@ -198,7 +198,7 @@ function simulateTick() {
 		for(let i = 0;i < cars.length;i ++) {
 			cars[i] = new Car(spawnX, spawnY);
 			cars[i].nn = copyNN(bestNN);
-			mutate(cars[i].nn, 0.05);
+			mutate(cars[i].nn, 0.02);
 		}
 
 		generations ++;
