@@ -4,6 +4,8 @@ const context = canvas.getContext('2d');
 const updateInterval = 20;
 const maxTicksPerGeneration = 1000;
 
+let ticksPerUpdate = 5;
+
 let currentTick = 0;
 let generationBeginTick = 0;
 
@@ -178,7 +180,7 @@ function simulateTick() {
 function update() {
 	const updateBegin = new Date();
 
-	for(let i = 0;i < 5;i ++) simulateTick();
+	for(let i = 0;i < ticksPerUpdate;i ++) simulateTick();
 
 	const updateEnd = new Date();
 	const diff = updateEnd - updateBegin;
