@@ -29,7 +29,7 @@ class Body {
 class Car {
 	constructor(x, y) {
 		this.sensors = 8;
-		this.nn = new Network([this.sensors, 5, 5, 2]);
+		this.nn = new Network([this.sensors, 5, 2]);
 		this.body = new Body(x, y, 10);
 		this.sensorRadius = this.body.r * (3 / 5);
 		this.angle = 0;
@@ -75,8 +75,8 @@ class Car {
 		if(ds < -0.1) ds = -0.1;
 		if(ds >  0.1) ds =  0.1;
 		this.speed += ds;
-		if(this.speed < -4) this.speed = -4;
-		if(this.speed >  4) this.speed =  4;
+		if(this.speed < -2) this.speed = -2;
+		if(this.speed >  2) this.speed =  2;
 
 		this.score += this.speed;
 
@@ -135,19 +135,20 @@ class Car {
 let road = [];
 let cars = [];
 
-const mapType = 0;
 let spawnX, spawnY;
 
 let updateBarrier = (tick) => {};
 
-if(mapType == 0) {
+const generateMap = (curves, curveScale) => {
 	spawnX = 450;
-	spawnY = 120;
+	spawnY =  80;
+
+	road = [];
 
 	function generateRing(r, n, cx, cy) {
 		for(let i = 0;i < n;i ++) {
 			const a = i / n * 2*Math.PI;
-			const mul = Math.sin(a * 6) / 20 + 1;
+			const mul = Math.sin(a * curves) * (curveScale / 20) + 1;
 
 			let rad = 10;
 			if(Math.random() < 0.2) rad += Math.random() * 15;
@@ -155,31 +156,18 @@ if(mapType == 0) {
 			road.push(new Body(r*mul * Math.cos(a) + cx, r*mul * Math.sin(a) + cy, rad));
 		}
 	}
-	generateRing(240, 70, 400, 400);
-	generateRing(350, 100, 400, 400);
+	generateRing(300, 100, 400, 400);
+	generateRing(430, 140, 400, 400);
 
-	road.push(new Body(spawnX - 200, spawnY, 100));
+	road.push(new Body(0, 0, 100));
 	updateBarrier = (tick) => {
-		road[road.length-1].x = Math.cos(tick / 120 - 0.70 * Math.PI) * 300 + 400;
-		road[road.length-1].y = Math.sin(tick / 120 - 0.70 * Math.PI) * 300 + 400;
+		road[road.length-1].x = Math.cos(tick / 230 - 0.65 * Math.PI) * 340 + 400;
+		road[road.length-1].y = Math.sin(tick / 230 - 0.65 * Math.PI) * 340 + 400;
 	}
+	updateBarrier(0);
 }
 
-if(mapType == 1) {
-	const generateLine = (sx, sy, ex, ey, n) => {
-		const dx = (ex-sx) / n;
-		const dy = (ey-sy) / n;
-		for(let i = 0;i < n;i ++) {
-			road.push(new Body(sx + i*dx, sy + i*dy, 10));
-		}
-	}
-	generateLine(30, 30, 200, 30, 7);
-	generateLine(200, 30, 600, 400, 30);
-	generateLine(30, 30, 500, 400, 30);
-
-	spawnX = 200;
-	spawnY = 100;
-}
+generateMap(6, 2);
 
 for(let i = 0;i < 50;i ++) {
 	cars.push(new Car(spawnX, spawnY));
@@ -215,6 +203,8 @@ function simulateTick() {
 
 		generations ++;
 		generationBeginTick = currentTick + 1;
+
+		generateMap(6, Math.sin(generations / 10) / 2 + 2);
 	}
 
 	updateBarrier(currentTick - generationBeginTick);
