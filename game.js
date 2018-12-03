@@ -2,7 +2,7 @@ const canvas = document.getElementById('maincanvas');
 const context = canvas.getContext('2d');
 
 const updateInterval = 20;
-const maxTicksPerGeneration = 1000;
+const maxTicksPerGeneration = 500;
 
 let ticksPerUpdate = 5;
 
@@ -33,7 +33,7 @@ class Car {
 		this.body = new Body(x, y, 10);
 		this.sensorRadius = this.body.r * (3 / 5);
 		this.angle = 0;
-		this.speed = 8;
+		this.speed = 0;
 		this.score = 0;
 		this.coll = false;
 	}
@@ -74,7 +74,8 @@ class Car {
 		if(ds < -0.1) ds = -0.1;
 		if(ds >  0.1) ds =  0.1;
 		this.speed += ds;
-		if(this.speed < 8) this.speed = 8;
+		if(this.speed < -5) this.speed = -5;
+		if(this.speed >  5) this.speed =  5;
 
 		this.score += this.speed;
 
@@ -119,7 +120,7 @@ class Car {
 		context.fillStyle = "blue";
 		this.body.draw();
 
-		this.drawSensors();
+		if(!this.coll) this.drawSensors();
 
 		context.restore();
 	}
@@ -128,21 +129,46 @@ class Car {
 let road = [];
 let cars = [];
 
-function generateRing(r, n, cx, cy) {
-	for(let i = 0;i < n;i ++) {
-		const a = i / n * 2*Math.PI;
-		road.push(new Body(r*Math.cos(a) + cx, r*Math.sin(a) + cy, 10));
-	}
-}
-generateRing(270, 50, 400, 400);
-generateRing(350, 80, 400, 400);
+const mapType = 0;
+let spawnX, spawnY;
 
-for(let i = 0;i < 10;i ++) {
-	road.push(new Body(Math.random() * 300 + 200, Math.random() * 600, 20));
+if(mapType == 0) {
+	function generateRing(r, n, cx, cy) {
+		for(let i = 0;i < n;i ++) {
+			const a = i / n * 2*Math.PI;
+			const mul = Math.sin(a * 6) / 10 + 1;
+
+			let rad = 10;
+			if(Math.random() < 0.2) rad += Math.random() * 15;
+
+			road.push(new Body(r*mul * Math.cos(a) + cx, r*mul * Math.sin(a) + cy, rad));
+		}
+	}
+	generateRing(240, 70, 400, 400);
+	generateRing(350, 100, 400, 400);
+
+	spawnX = 450;
+	spawnY = 120;
+}
+
+if(mapType == 1) {
+	const generateLine = (sx, sy, ex, ey, n) => {
+		const dx = (ex-sx) / n;
+		const dy = (ey-sy) / n;
+		for(let i = 0;i < n;i ++) {
+			road.push(new Body(sx + i*dx, sy + i*dy, 10));
+		}
+	}
+	generateLine(30, 30, 200, 30, 7);
+	generateLine(200, 30, 600, 400, 30);
+	generateLine(30, 30, 500, 400, 30);
+
+	spawnX = 200;
+	spawnY = 100;
 }
 
 for(let i = 0;i < 70;i ++) {
-	cars.push(new Car(450, 100));
+	cars.push(new Car(spawnX, spawnY));
 }
 
 let generations = 0;
@@ -167,7 +193,7 @@ function simulateTick() {
 
 		const bestNN = copyNN(cars[bestI].nn);
 		for(let i = 0;i < cars.length;i ++) {
-			cars[i] = new Car(450, 100);
+			cars[i] = new Car(spawnX, spawnY);
 			cars[i].nn = copyNN(bestNN);
 			mutate(cars[i].nn, 0.05);
 		}
