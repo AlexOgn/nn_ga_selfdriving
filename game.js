@@ -36,6 +36,7 @@ class Car {
 		this.speed = 0;
 		this.score = 0;
 		this.coll = false;
+		this.marked = false;
 	}
 
 	collectInputFromSensors() {
@@ -66,16 +67,16 @@ class Car {
 		const result = this.nn.run(input);
 
 		let da = result[0];
-		if(da < -0.1) da = -0.1;
-		if(da >  0.1) da =  0.1;
+		if(da < -0.2) da = -0.2;
+		if(da >  0.2) da =  0.2;
 		this.angle += da;
 
 		let ds = result[1];
 		if(ds < -0.1) ds = -0.1;
 		if(ds >  0.1) ds =  0.1;
 		this.speed += ds;
-		if(this.speed < -5) this.speed = -5;
-		if(this.speed >  5) this.speed =  5;
+		if(this.speed < -4) this.speed = -4;
+		if(this.speed >  4) this.speed =  4;
 
 		this.score += this.speed;
 
@@ -117,7 +118,12 @@ class Car {
 	draw() {
 		context.save();
 
-		context.fillStyle = "blue";
+		if(this.marked) {
+			context.fillStyle = "yellow";
+		} else {
+			context.globalAlpha *= 0.2;
+			context.fillStyle = "blue";
+		}
 		this.body.draw();
 
 		if(!this.coll) this.drawSensors();
@@ -132,11 +138,16 @@ let cars = [];
 const mapType = 0;
 let spawnX, spawnY;
 
+let updateBarrier = (tick) => {};
+
 if(mapType == 0) {
+	spawnX = 450;
+	spawnY = 120;
+
 	function generateRing(r, n, cx, cy) {
 		for(let i = 0;i < n;i ++) {
 			const a = i / n * 2*Math.PI;
-			const mul = Math.sin(a * 6) / 10 + 1;
+			const mul = Math.sin(a * 6) / 20 + 1;
 
 			let rad = 10;
 			if(Math.random() < 0.2) rad += Math.random() * 15;
@@ -147,8 +158,11 @@ if(mapType == 0) {
 	generateRing(240, 70, 400, 400);
 	generateRing(350, 100, 400, 400);
 
-	spawnX = 450;
-	spawnY = 120;
+	road.push(new Body(spawnX - 200, spawnY, 100));
+	updateBarrier = (tick) => {
+		road[road.length-1].x = Math.cos(tick / 120 - 0.70 * Math.PI) * 300 + 400;
+		road[road.length-1].y = Math.sin(tick / 120 - 0.70 * Math.PI) * 300 + 400;
+	}
 }
 
 if(mapType == 1) {
@@ -167,7 +181,7 @@ if(mapType == 1) {
 	spawnY = 100;
 }
 
-for(let i = 0;i < 70;i ++) {
+for(let i = 0;i < 50;i ++) {
 	cars.push(new Car(spawnX, spawnY));
 }
 
@@ -178,17 +192,18 @@ function simulateTick() {
 
 	let alive = 0;
 	for(let c of cars) {
+		c.marked = false;
 		alive += !c.coll;
 		c.run();
 	}
 
+	let bestI = 0;
+	for(let i = 1;i < cars.length;i ++) {
+		if(cars[i].score > cars[bestI].score) bestI = i;
+	}
+	cars[bestI].marked = true;
+
 	if(alive == 0 || currentTick - generationBeginTick > maxTicksPerGeneration) {
-		let bestI = 0;
-		for(let i = 1;i < cars.length;i ++) {
-			if(cars[i].score > cars[bestI].score) {
-				bestI = i;
-			}
-		}
 		console.log(generations, cars[bestI].score, bestI)
 
 		const bestNN = copyNN(cars[bestI].nn);
@@ -201,6 +216,8 @@ function simulateTick() {
 		generations ++;
 		generationBeginTick = currentTick + 1;
 	}
+
+	updateBarrier(currentTick - generationBeginTick);
 }
 
 function update() {
@@ -210,9 +227,11 @@ function update() {
 
 	const updateEnd = new Date();
 	const diff = updateEnd - updateBegin;
+	/*
 	if(updateEnd - updateBegin > updateInterval) {
 		console.log("Can't keep up", diff);
 	}
+	*/
 }
 
 function draw() {
