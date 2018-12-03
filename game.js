@@ -1,7 +1,11 @@
 const canvas = document.getElementById('maincanvas');
 const context = canvas.getContext('2d');
 
-const updateInterval = 10;
+const updateInterval = 20;
+const maxTicksPerGeneration = 1000;
+
+let currentTick = 0;
+let generationBeginTick = 0;
 
 function dist(x1, y1, x2, y2) {
 	return Math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
@@ -27,7 +31,7 @@ class Car {
 		this.body = new Body(x, y, 10);
 		this.sensorRadius = this.body.r * (3 / 5);
 		this.angle = 0;
-		this.speed = 2;
+		this.speed = 8;
 		this.score = 0;
 		this.coll = false;
 	}
@@ -68,8 +72,9 @@ class Car {
 		if(ds < -0.1) ds = -0.1;
 		if(ds >  0.1) ds =  0.1;
 		this.speed += ds;
+		if(this.speed < 8) this.speed = 8;
 
-		this.score += ds;
+		this.score += this.speed;
 
 		this.body.x += Math.cos(this.angle) * this.speed;
 		this.body.y += Math.sin(this.angle) * this.speed;
@@ -134,12 +139,14 @@ for(let i = 0;i < 10;i ++) {
 	road.push(new Body(Math.random() * 300 + 200, Math.random() * 600, 20));
 }
 
-for(let i = 0;i < 30;i ++) {
+for(let i = 0;i < 70;i ++) {
 	cars.push(new Car(450, 100));
 }
 
-function update() {
-	const updateBegin = new Date();
+let generations = 0;
+
+function simulateTick() {
+	currentTick ++;
 
 	let alive = 0;
 	for(let c of cars) {
@@ -147,15 +154,31 @@ function update() {
 		c.run();
 	}
 
-	if(alive == 0) {
+	if(alive == 0 || currentTick - generationBeginTick > maxTicksPerGeneration) {
 		let bestI = 0;
 		for(let i = 1;i < cars.length;i ++) {
 			if(cars[i].score > cars[bestI].score) {
 				bestI = i;
 			}
 		}
-		console.log(cars[bestI].score, bestI)
+		console.log(generations, cars[bestI].score, bestI)
+
+		const bestNN = copyNN(cars[bestI].nn);
+		for(let i = 0;i < cars.length;i ++) {
+			cars[i] = new Car(450, 100);
+			cars[i].nn = copyNN(bestNN);
+			mutate(cars[i].nn, 0.05);
+		}
+
+		generations ++;
+		generationBeginTick = currentTick + 1;
 	}
+}
+
+function update() {
+	const updateBegin = new Date();
+
+	for(let i = 0;i < 5;i ++) simulateTick();
 
 	const updateEnd = new Date();
 	const diff = updateEnd - updateBegin;
