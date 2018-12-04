@@ -9,6 +9,18 @@ let ticksPerUpdate = 5;
 let currentTick = 0;
 let generationBeginTick = 0;
 
+let generationHistory = [];
+
+class generationHistoryDataPoint {
+	constructor(generation, bestIndividual, averageScore) {
+		this.generationId = generation;
+		this.bestNN       = bestIndividual.nn;
+		this.bestScore    = bestIndividual.score;
+		this.averageScore = averageScore;
+		this.date         = new Date();
+	}
+}
+
 function dist(x1, y1, x2, y2) {
 	return Math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
 }
@@ -193,14 +205,19 @@ function simulateTick() {
 	cars[bestI].marked = true;
 
 	if(alive == 0 || currentTick - generationBeginTick > maxTicksPerGeneration) {
-		console.log(generations, cars[bestI].score, bestI)
+		console.log(generations, cars[bestI].score.toFixed(2), bestI)
 
 		const bestNN = copyNN(cars[bestI].nn);
+		let totalScore = 0;
 		for(let i = 0;i < cars.length;i ++) {
+			totalScore += cars[i].score; // acumulate before erasing the car
 			cars[i] = new Car(spawnX, spawnY);
 			cars[i].nn = copyNN(bestNN);
 			mutate(cars[i].nn, 0.02);
 		}
+
+		generationHistory.push(new generationHistoryDataPoint(generations,
+		                       cars[bestI], totalScore / cars.length));
 
 		generations ++;
 		generationBeginTick = currentTick + 1;
