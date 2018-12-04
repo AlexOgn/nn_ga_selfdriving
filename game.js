@@ -28,10 +28,10 @@ class Body {
 
 class Car {
 	constructor(x, y) {
-		this.sensors = 6;
-		this.nn = new Network([this.sensors, 5, 2], F_TanH);
+		this.sensors = 8;
+		this.nn = new Network([this.sensors+1, 5, 2], F_TanH);
 		this.body = new Body(x, y, 10);
-		this.sensorRadius = this.body.r * (4 / 5);
+		this.sensorRadius = this.body.r * (3 / 5);
 		this.angle = 0;
 		this.speed = 0;
 		this.score = 0;
@@ -64,6 +64,7 @@ class Car {
 		if(this.coll) return;
 
 		let input = this.collectInputFromSensors();
+		input.push(this.speed);
 		const result = this.nn.run(input);
 
 		let da = result[0];
@@ -75,8 +76,8 @@ class Car {
 		if(ds < -0.1) ds = -0.1;
 		if(ds >  0.1) ds =  0.1;
 		this.speed += ds;
-		if(this.speed < -2) this.speed = -2;
-		if(this.speed >  2) this.speed =  2;
+		if(this.speed < -4) this.speed = -4;
+		if(this.speed >  4) this.speed =  4;
 
 		this.score += this.speed;
 
@@ -156,18 +157,18 @@ const generateMap = (curves, curveScale) => {
 			road.push(new Body(r*mul * Math.cos(a) + cx, r*mul * Math.sin(a) + cy, rad));
 		}
 	}
-	generateRing(300, 100, 400, 400);
-	generateRing(430, 140, 400, 400);
+	generateRing(200, 100, 400, 400);
+	generateRing(350, 160, 400, 400);
 
 	road.push(new Body(0, 0, 100));
 	updateBarrier = (tick) => {
-		road[road.length-1].x = Math.cos(tick / 230 - 0.65 * Math.PI) * 340 + 400;
-		road[road.length-1].y = Math.sin(tick / 230 - 0.65 * Math.PI) * 340 + 400;
+		road[road.length-1].x = Math.cos(tick / 230 - 0.60 * Math.PI) * 300 + 400;
+		road[road.length-1].y = Math.sin(tick / 230 - 0.60 * Math.PI) * 300 + 400;
 	}
 	updateBarrier(0);
 }
 
-generateMap(6, 2);
+generateMap(8, 4);
 
 for(let i = 0;i < 50;i ++) {
 	cars.push(new Car(spawnX, spawnY));
@@ -204,7 +205,7 @@ function simulateTick() {
 		generations ++;
 		generationBeginTick = currentTick + 1;
 
-		generateMap(6, Math.sin(generations / 10) / 2 + 2);
+		//generateMap(6, Math.sin(generations / 10) / 2 + 2);
 	}
 
 	updateBarrier(currentTick - generationBeginTick);
