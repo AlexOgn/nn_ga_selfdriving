@@ -9,6 +9,10 @@ let ticksPerUpdate = 5;
 let currentTick = 0;
 let generationBeginTick = 0;
 
+function dist(x1, y1, x2, y2) {
+	return Math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
+}
+
 let generationHistory = [];
 
 class generationHistoryDataPoint {
@@ -21,9 +25,80 @@ class generationHistoryDataPoint {
 	}
 }
 
-function dist(x1, y1, x2, y2) {
-	return Math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
+class UIBox {
+	constructor(x, y, width, height, func) {
+		this.x      = x;
+		this.y      = y;
+		this.width  = width;
+		this.height = height;
+
+		this.renderFunction = func;
+	}
+	render() {
+		context.save();
+		context.translate(this.x, this.y);
+		context.scale(this.width, this.height);
+
+		context.globalAlpha = 0.3;
+		context.fillRect(0, 0, 1, 1);
+
+		this.renderFunction();
+
+		context.restore();
+	}
 }
+
+let UIBoxes = [];
+UIBoxes.push(new UIBox(400, 400, 200, 100, (startX, startY, width, height) => {
+	let bestScore = 1;
+	for(const hp of generationHistory) {
+		if(hp.bestScore > bestScore) bestScore = hp.bestScore;
+	}
+
+	context.beginPath();
+	context.moveTo(0, 1);
+	for(let i = 0;i < generationHistory.length;i ++) {
+		const hp = generationHistory[i];
+		context.lineTo(i / generationHistory.length, 1 - hp.bestScore / bestScore);
+	}
+	context.lineTo(1, 1);
+	context.closePath();
+
+	context.globalAlpha = 0.2;
+	context.fillStyle = "blue";
+	context.fill();
+}));
+
+let attached = null;
+let attachedType = null;
+
+canvas.addEventListener('mousedown', (event) => {
+	attached = null;
+	for(const box of UIBoxes) {
+		if(   box.x <= event.x && event.x <= box.x + box.width
+		   && box.y <= event.y && event.y <= box.y + box.height) {
+			   const d = dist(event.x, event.y, box.x + box.width, box.y + box.height);
+			   attachedType = (d < canvas.width / 20);
+			   attached = box;
+		   }
+	}
+});
+canvas.addEventListener('mouseup', (event) => {
+	attached = null;
+});
+
+canvas.addEventListener('mousemove', (event) => {
+	if(attached != null) {
+		if(attachedType == 0) {
+			attached.x += event.movementX;
+			attached.y += event.movementY;
+		} else {
+			attached.width  += event.movementX;
+			attached.height += event.movementY;
+		}
+	}
+
+});
 
 class Body {
 	constructor(x, y, r) {
@@ -182,7 +257,7 @@ const generateMap = (curves, curveScale) => {
 
 generateMap(8, 4);
 
-for(let i = 0;i < 50;i ++) {
+for(let i = 0;i < 70;i ++) {
 	cars.push(new Car(spawnX, spawnY));
 }
 
@@ -209,15 +284,22 @@ function simulateTick() {
 
 		const bestNN = copyNN(cars[bestI].nn);
 		let totalScore = 0;
+		const mutationRate = 0.08;
+
 		for(let i = 0;i < cars.length;i ++) {
 			totalScore += cars[i].score; // acumulate before erasing the car
-			cars[i] = new Car(spawnX, spawnY);
-			cars[i].nn = copyNN(bestNN);
-			mutate(cars[i].nn, 0.02);
 		}
 
 		generationHistory.push(new generationHistoryDataPoint(generations,
 		                       cars[bestI], totalScore / cars.length));
+
+		for(let i = 0;i < cars.length;i ++) {
+			cars[i] = new Car(spawnX, spawnY);
+			cars[i].nn = copyNN(bestNN);
+			/*const mutCnt = */mutate(cars[i].nn, (i == 0 ? 0 : mutationRate));
+			//if(mutCnt < 1) console.log('mutation rate too low');
+		}
+
 
 		generations ++;
 		generationBeginTick = currentTick + 1;
@@ -236,7 +318,7 @@ function update() {
 	const updateEnd = new Date();
 	const diff = updateEnd - updateBegin;
 	/*
-	if(updateEnd - updateBegin > updateInterval) {
+	if(diff > updateInterval) {
 		console.log("Can't keep up", diff);
 	}
 	*/
@@ -250,6 +332,8 @@ function draw() {
 	context.globalAlpha = 0.5;
 	for(let c of cars) c.draw();
 	context.globalAlpha = 1;
+
+	for(const box of UIBoxes) box.render();
 
 	const drawEnd = new Date();
 	const diff = drawEnd - drawBegin;
